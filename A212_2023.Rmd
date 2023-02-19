@@ -1,0 +1,140 @@
+---
+title: "A212 Lecturing 2023"
+author: "Valentine Chisango"
+date: '2023-01-26'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loss Distributions
+
+```{r loss_distributions, echo=FALSE}
+
+#library containing numerous insurnace datasets
+library(insuranceData)
+
+#library for string manipulation
+library(stringr)
+
+#setting to avoid defaulting to scientisfic notation
+options(scipen=999)
+
+#loading auto claims dataset
+data("AutoClaims")
+
+#truncating the dataset
+loss_data = AutoClaims$PAID[AutoClaims$PAID <= 10000]
+
+hist(loss_data, xlab = "Claim Amount", ylab = "Frequency", main = "Histogram of Motor Insurance Claims", col = "purple")
+
+#useful values for calculations
+sum_xi = sum(loss_data)
+sum_xisq = sum(loss_data^2)
+median_xi = median(loss_data)
+N = length(loss_data)
+x_bar = sum_xi/N
+
+useful_data = data.frame(
+  SummaryStatistic = c(sum_xi)
+)
+
+#estimates of lambda
+lambda_mme = 1/x_bar
+lambda_mle = 1/x_bar
+lambda_mpe = -log(0.5)/median_xi
+
+breaks = seq(from = 0, to = 10000, by = 1000)
+intervals = cut(loss_data, breaks = breaks)
+observed_counts = as.numeric(table(intervals))
+
+intervals_text <- str_replace_all(levels(intervals), "[()\\[\\]]", "")
+
+interval_ranges <- lapply(intervals_text, function(x) c(as.numeric(strsplit(x, ",")[[1]])))
+
+expected_counts_mme = c()
+for (i in 1:length(interval_ranges)){
+  expected_counts_mme[i] = length(loss_data)*(pexp(interval_ranges[[i]][2], rate = lambda_mme) - pexp(interval_ranges[[i]][1], rate = lambda_mme))
+}
+
+expected_counts_mle = c()
+for (i in 1:length(interval_ranges)){
+  expected_counts_mle[i] = length(loss_data)*(pexp(interval_ranges[[i]][2], rate = lambda_mle) - pexp(interval_ranges[[i]][1], rate = lambda_mle))
+}
+
+expected_counts_mpe = c()
+for (i in 1:length(interval_ranges)){
+  expected_counts_mpe[i] = length(loss_data)*(pexp(interval_ranges[[i]][2], rate = lambda_mpe) - pexp(interval_ranges[[i]][1], rate = lambda_mpe))
+}
+
+test_stat_mle = sum((observed_counts-expected_counts_mle)^2/expected_counts_mle)
+test_stat_mme = sum((observed_counts-expected_counts_mme)^2/expected_counts_mme)
+test_stat_mpe = sum((observed_counts-expected_counts_mle)^2/expected_counts_mpe)
+
+p_value_mle = pchisq(test_stat_mle, df = length(observed_counts)-2, lower.tail = FALSE)
+p_value_mme = pchisq(test_stat_mme, df = length(observed_counts)-2, lower.tail = FALSE)
+p_value_mpe = pchisq(test_stat_mpe, df = length(observed_counts)-2, lower.tail = FALSE)
+
+fit_lnorm = fitdistr(loss_data, "log-normal")
+
+shape = fit_lnorm$estimate[1]
+scale = fit_lnorm$estimate[2]
+
+expected_counts_wei = c()
+for (i in 1:length(interval_ranges)){
+  expected_counts_wei[i] = length(loss_data)*(plnorm(interval_ranges[[i]][2], meanlog = shape, sdlog = scale) - plnorm(interval_ranges[[i]][1], meanlog = shape, sdlog = scale))
+}
+
+test_stat_lnorm = sum((observed_counts-expected_counts_lnorm)^2/expected_counts_lnorm)
+p_value_lnorm = pchisq(test_stat_wei, df = length(observed_counts)-3, lower.tail = FALSE)
+
+
+#superimposing the fitting distributions onto the observed data
+hist(loss_data, xlab = "Claim Amount", main = "Histogram of Motor Insurance Claims", col = "gray", ylim = c(0,0.0007), freq = FALSE)
+density_mle = dexp(1:10000, rate = lambda_mle)
+lines(density_mle, col = "red", lwd = 2)
+density_mme = dexp(1:10000, rate = lambda_mme)
+lines(density_mme, col = "green", lwd = 2)
+density_mpe = dexp(1:10000, rate = lambda_mpe)
+lines(density_mpe, col = "blue", lwd = 2)
+density_lnorm = dlnorm(1:10000, meanlog = shape, sdlog = scale)
+lines(density_lnorm, col = "orange", lwd = 2)
+legend("topright", c("Exp-MME","Exp-MLE","Exp-MPE", "Log-Norm"), col = c("green", "red", "blue", "orange"), lty = 1)
+```
+
+## Extreme Value Theory
+```{r extreme_value_theory, echo=FALSE}
+#library containing numerous insurnace datasets
+library(insuranceData)
+
+#library for string manipulation
+library(stringr)
+
+#library for fitting more distributions, including the Pareto
+library(fitdistrplus)
+library(actuar)
+
+#libraries for graph plotting
+library(ggplot2)
+library(ggbreak) 
+
+#setting to avoid defaulting to scientisfic notation
+options(scipen=999)
+
+#loading auto claims dataset
+data("AutoClaims")
+
+#truncating the dataset
+loss_data = AutoClaims$PAID
+
+fit_pareto1 = fitdist(loss_data, "pareto", start=list(shape=1, scale=1))
+shape = fit_pareto1$estimate[1]
+scale = fit_pareto1$estimate[2]
+
+p <- ggplot(data.frame(loss_data), aes(x=loss_data)) + 
+  geom_histogram(binwidth=5000, fill="#69b3a2", color="#e9ecef", boundary=0)  + xlab("Claim Amount") + ylab("Frequency") +theme_classic() + theme(plot.title=element_text(hjust=0.5)) + scale_y_break(c(500,6000)) + labs(title="Histogram of Motor Insurance Claims")
+p
+```
+
