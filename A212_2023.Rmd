@@ -138,3 +138,71 @@ p <- ggplot(data.frame(loss_data), aes(x=loss_data)) +
 p
 ```
 
+## Reinsurance
+```{r reinsurance, echo=FALSE}
+#library containing numerous insurnace datasets
+library(insuranceData)
+
+#library for string manipulation
+library(stringr)
+
+#libraries for graph plotting
+library(ggplot2)
+library(ggbreak) 
+library(dplyr)
+
+#setting to avoid defaulting to scientisfic notation
+options(scipen=999)
+
+#loading auto claims dataset
+data("AutoClaims")
+
+#truncating the dataset
+loss_data = AutoClaims$PAID
+
+set.seed(1)
+
+sample_data = sample(loss_data, 10)
+#sample_data = sort(sample_data)
+
+values_prop = rbind(sample_data*0.4, sample_data*0.6)
+M = 2000
+values_xl = rbind(pmin(sample_data, M), pmax(0, sample_data - M))
+L = 1000
+values_excess = rbind( pmin(sample_data, L), pmax(sample_data - L, 0))
+colors = c("#69b3a2","#FF3333")
+colors2 = c("#FF3333","#69b3a2")
+payer <- c("Insurer","Reinsurer")
+payer2 <- c("Policyholder","Insurer")
+
+png(file = "bar_prop.png")
+barplot(values_prop, main = "Share of claims under proportional reinsurance", ylab = "Claim Amount", col = colors)
+legend("topright", payer, cex = 1.3, fill = colors)
+dev.off()
+
+png(file = "bar_xl.png")
+barplot(values_xl, main = "Share of claims under excess of loss reinsurance", ylab = "Claim Amount", col = colors)
+legend("topright", payer, cex = 1.3, fill = colors)
+dev.off()
+
+png(file = "bar_excess.png")
+barplot(values_excess, main = "Share of claims under a policy excess", ylab = "Claim Amount", col = colors2)
+legend("topright", payer2, cex = 1.3, fill = colors2)
+dev.off()
+
+M = 20000
+
+mean(loss_data)
+mean(loss_data*0.6)
+mean(pmin(sample_data, M))
+mean(pmax(sample_data - L, 0))
+
+var(loss_data)
+var(loss_data*0.6)
+var(pmin(sample_data, M))
+var(pmax(sample_data - L, 0))
+
+```
+
+
+
