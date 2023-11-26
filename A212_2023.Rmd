@@ -203,6 +203,57 @@ var(pmin(sample_data, M))
 var(pmax(sample_data - L, 0))
 
 ```
+# Makrov Chains
+```{r}
+#libraries used to draw the transition diagram
+library('heemod')
+library('diagram')
+
+#library to work with markov chains
+library(markovchain)
+
+#setting up the model
+states = c('H', 'D')
+P = matrix(c(.995, .005,
+             .0025, .9975), nrow = 2, ncol = 2, byrow = TRUE)
+
+#drawing the transition diagram
+loanhealth_model <- define_transition(
+state_names = states,
+  .995, .005, 
+  .0025, .9975)
+
+plot(loanhealth_model, 
+     self.shiftx = c(0.15,0.15,0), 
+     self.shifty = c(0.11,-0.11,0), box.col = c('red', 'green'))
+
+#creating a markov chain object
+mc = new("markovchain", transitionMatrix = P, states = states, name = "LoanHealth") 
+
+#extracting the properties of the chain
+is.irreducible(mc)
+period(mc)
+
+#setting up the loan information
+loan_amount = 100
+repayment = c(10, 0)
+prior_dist = c(1,0)
+expected_repayment = numeric(12)
+
+#calculating the expected profit
+for (i in 1:12){
+  new_dist = prior_dist %*% P
+  expected_repayment[i] = sum(new_dist * repayment)
+  prior_dist = new_dist
+}
+
+expected_revenue = sum(expected_repayment)
+expected_profit = expected_revenue - loan_amount
+
+#stationary distribution
+stationary_dist = steadyStates(mc)
+```
+
 
 
 
